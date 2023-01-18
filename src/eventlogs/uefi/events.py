@@ -114,11 +114,11 @@ register_event_handler(
 @dataclass
 class UEFIVariableDataEvent(UEFIEvent):
     variable_name: UUID
-    unicode_name: str
+    unicode_name: bytes
     variable_data: UEFIVariable
 
     @property
-    def name(self):
+    def name(self) -> str:
         nstr = self.unicode_name.decode("utf-16-le")
         gstr = str(self.variable_name)
         return f"{nstr}-{gstr}"
@@ -393,7 +393,7 @@ class UEFIPartitionEntry:
     partition_name: bytes
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.partition_name.decode("utf-16-le")
 
     @classmethod

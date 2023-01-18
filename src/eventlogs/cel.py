@@ -245,12 +245,12 @@ class TLVParser:
         self._offset = 0
 
     @property
-    def left(self):
+    def left(self) -> int:
         """left (int): The number of unparsed bytes."""
         return len(self._data) - self._offset
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         """offset (int): The current offet into the data."""
         return self._offset
 
@@ -269,7 +269,7 @@ class TLVParser:
         self._offset += len(b)
         return b
 
-    def get_int(self, size, max_size):
+    def get_int(self, size: int, max_size: int) -> int:
         """Get int from bytes.
 
         Args:
@@ -305,7 +305,7 @@ class TLVParser:
         return t, vl
 
     def get_tlv_int(
-        self, max_size, expect: Union[int, Iterable[int]]
+        self, max_size: int, expect: Union[int, Iterable[int]]
     ) -> Tuple[int, int]:
         """Get an TLV encoded number.
 

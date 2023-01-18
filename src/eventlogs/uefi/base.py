@@ -55,7 +55,7 @@ class UEFIEvent:
     digests: Dict[DigestAlgorithm, bytes]
 
     @classmethod
-    def parse(cls, parser: "UEFIParser", header: "UEFIEvent"):
+    def parse(cls, parser: "UEFIParser", header: "UEFIEvent") -> "UEFIEvent":
         raise NotImplementedError
 
 
@@ -112,7 +112,7 @@ def register_event_handler(
     event_type: UEFIEventType,
     handler: Type[UEFIEvent],
     pcr: Optional[int] = None,
-):
+) -> None:
     key: Union[UEFIEventType, Tuple[UEFIEventType, int]]
     key = event_type
     if pcr is not None:
@@ -138,7 +138,7 @@ def register_variable_handler(
     variable_name: UUID,
     unicode_name: Union[bytes, str],
     handler: Type[UEFIVariable],
-):
+) -> None:
     if isinstance(unicode_name, str):
         unicode_name = unicode_name.encode("utf-16-le")
     _variable_handlers[(variable_name, unicode_name)] = handler
@@ -160,22 +160,22 @@ class UEFIParser:
         self._digest_sizes: Dict[DigestAlgorithm, int] = dict()
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         return self._offset
 
     @property
-    def left(self):
+    def left(self) -> int:
         return len(self._data) - self.offset
 
     @property
-    def uintn_size(self):
+    def uintn_size(self) -> int:
         if self._uintn == 2:
             return 8
         elif self._uintn == 1:
             return 4
         raise AttributeError
 
-    def get_bytes(self, size):
+    def get_bytes(self, size: int) -> bytes:
         if size > self.left:
             raise EOFError
         elif size < 0:
@@ -184,30 +184,30 @@ class UEFIParser:
         self._offset += size
         return b
 
-    def get_int(self, size):
+    def get_int(self, size: int) -> int:
         vb = self.get_bytes(size)
         return int.from_bytes(vb, byteorder="little")
 
-    def get_uint32(self):
+    def get_uint32(self) -> int:
         return self.get_int(4)
 
-    def get_len_bytes(self):
+    def get_len_bytes(self) -> bytes:
         vl = self.get_uint32()
         b = self.get_bytes(vl)
         return b
 
-    def get_subparser(self, data):
+    def get_subparser(self, data: bytes) -> "UEFIParser":
         subparser = type(self)(
             data
         )
         subparser._uintn = self._uintn
         return subparser
 
-    def get_guid(self):
+    def get_guid(self) -> UUID:
         b = self.get_bytes(16)
         return UUID(bytes_le=b)
 
-    def get_utf16(self):
+    def get_utf16(self) -> bytes:
         b = bytearray()
         while True:
             c = self.get_bytes(2)
@@ -216,7 +216,7 @@ class UEFIParser:
                 break
         return bytes(b)
 
-    def get_digests(self):
+    def get_digests(self) -> Dict[DigestAlgorithm, bytes]:
         num_digs = self.get_uint32()
         digests = dict()
         while num_digs:
@@ -269,10 +269,11 @@ class UEFIParser:
     def parse_event(self) -> UEFIEvent:
         pcr = self.get_uint32()
         event_type = self.get_uint32()
+        event_type = UEFIEventType(event_type)
         digests = self.get_digests()
         header = UEFIEvent(
             pcr=pcr,
-            event_type=UEFIEventType(event_type),
+            event_type=event_type,
             digests=digests,
         )
         subdata = self.get_len_bytes()

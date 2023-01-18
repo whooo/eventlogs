@@ -93,13 +93,13 @@ _device_path_handlers = dict()
 
 def register_device_path_handler(
     device_type: DeviceType, device_subtype: int, handler: Type[DevicePath]
-):
+) -> None:
     _device_path_handlers[(device_type, device_subtype)] = handler
 
 
 def lookup_device_path_handler(
     device_type: DeviceType, device_subtype: int
-):
+) -> Type[DevicePath]:
     return _device_path_handlers.get(
         (device_type, device_subtype), UnknownDevicePath
     )
@@ -225,7 +225,7 @@ class HarddriveDevicePath(MediaDevicePath):
             partition_start=partition_start,
             partition_size=partition_size,
             signature=signature,
-            mbr_type=mbr_type,
+            mbr_type=MBRType(mbr_type),
             signature_type=signature_type,
         )
 
@@ -283,6 +283,7 @@ def parse_device_path(parser: UEFIParser) -> Tuple[DevicePath, ...]:
     entries = list()
     while parser.left:
         device_type = parser.get_int(1)
+        device_type = DeviceType(device_type)
         device_subtype = parser.get_int(1)
         header = DevicePath(
             device_type=DeviceType(device_type),

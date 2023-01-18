@@ -5,7 +5,7 @@ from enum import IntEnum
 
 class _EnumBase(IntEnum):
     """Simple class to override default Enum __str__"""
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name}"
 
 

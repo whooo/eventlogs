@@ -209,7 +209,7 @@ class IMAParser:
     def offset(self) -> int:
         return self._offset
 
-    def get_bytes(self, size) -> bytes:
+    def get_bytes(self, size: int) -> bytes:
         if size > self.left:
             raise EOFError
         b = self._data[self.offset:self.offset + size]

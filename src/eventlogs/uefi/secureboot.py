@@ -64,7 +64,7 @@ _signature_type_handlers = dict()
 
 def register_signature_type_handler(
     signature_type: UUID, handler: Type[SignatureData]
-):
+) -> None:
     _signature_type_handlers[signature_type] = handler
 
 
