@@ -4,7 +4,7 @@
 This module implements IMA structures and encodings.
 """
 
-from .cel import DigestAlgorithm
+from .common import DigestAlgorithm
 from dataclasses import dataclass
 from enum import Enum
 from typing import Tuple, Dict, List, Literal

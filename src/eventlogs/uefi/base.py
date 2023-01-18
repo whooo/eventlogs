@@ -4,7 +4,7 @@
 This module implements UEFI structures and encodings.
 """
 
-from ..cel import DigestAlgorithm
+from ..common import DigestAlgorithm
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Dict, Optional, Type, Union

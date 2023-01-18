@@ -4,15 +4,9 @@
 This module implements the Canonical Event Log structures and encodings
 """
 
+from .common import _EnumBase, DigestAlgorithm
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import Dict, Iterable, Tuple
-
-
-class _EnumBase(IntEnum):
-    """Simple class to override default Enum __str__"""
-    def __str__(self):
-        return f"{self.name}"
 
 
 class CELBaseType(_EnumBase):
@@ -80,15 +74,6 @@ class CELVersionType(_EnumBase):
     """
     major = 0
     minor = 1
-
-
-class DigestAlgorithm(_EnumBase):
-    """Digest algorihtms"""
-    sha1 = 4
-    sha256 = 11
-    sha384 = 12
-    sha512 = 13
-    sm3_256 = 18
 
 
 class CELPCClientSTDType(_EnumBase):
