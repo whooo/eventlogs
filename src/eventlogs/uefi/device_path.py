@@ -8,7 +8,7 @@ This module implements UEFI device path structures.
 from .base import UEFIParser, UEFIVariable, register_variable_handler
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Tuple, Union
+from typing import Tuple, Union, Type
 from uuid import UUID
 
 
@@ -68,7 +68,7 @@ class DevicePath:
     device_subtype: int
 
     @classmethod
-    def parse(cls, parser: UEFIParser) -> "DevicePath":
+    def parse(cls, parser: UEFIParser, header: "DevicePath") -> "DevicePath":
         raise NotImplementedError
 
 
@@ -92,7 +92,7 @@ _device_path_handlers = dict()
 
 
 def register_device_path_handler(
-    device_type: DeviceType, device_subtype: int, handler: DevicePath
+    device_type: DeviceType, device_subtype: int, handler: Type[DevicePath]
 ):
     _device_path_handlers[(device_type, device_subtype)] = handler
 
@@ -204,6 +204,7 @@ class HarddriveDevicePath(MediaDevicePath):
     def parse(
         cls, parser: UEFIParser, header: DevicePath
     ) -> "HarddriveDevicePath":
+        signature: Union[None, int, UUID]
         partition_number = parser.get_uint32()
         partition_start = parser.get_int(8)
         partition_size = parser.get_int(8)
@@ -278,7 +279,7 @@ register_device_path_handler(
 )
 
 
-def parse_device_path(parser: UEFIParser) -> Tuple[DevicePath]:
+def parse_device_path(parser: UEFIParser) -> Tuple[DevicePath, ...]:
     entries = list()
     while parser.left:
         device_type = parser.get_int(1)
@@ -300,7 +301,7 @@ def parse_device_path(parser: UEFIParser) -> Tuple[DevicePath]:
 class UEFIBootVariable(UEFIVariable):
     attributes: int  # FIXME, add enum
     description: bytes
-    file_path_list: Tuple[DevicePath]
+    file_path_list: Tuple[DevicePath, ...]
     optional_data: bytes
 
     @classmethod
@@ -330,7 +331,7 @@ for order in range(0, 65535):
 
 @dataclass
 class UEFIBootOrderVariable(UEFIVariable):
-    boot_order: Tuple[int]
+    boot_order: Tuple[int, ...]
 
     @classmethod
     def parse(cls, parser: UEFIParser) -> "UEFIBootOrderVariable":

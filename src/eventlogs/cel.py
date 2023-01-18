@@ -6,7 +6,7 @@ This module implements the Canonical Event Log structures and encodings
 
 from .common import _EnumBase, DigestAlgorithm
 from dataclasses import dataclass
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Tuple, Union
 
 
 class CELBaseType(_EnumBase):
@@ -126,7 +126,6 @@ class CELMgmtEvent(CELEvent):
         Set to `CELContentType.cel`.
       type (CELMgmtType): The CEL management type.
     """
-    content_type = CELContentType.cel
     type: CELMgmtType
 
 
@@ -143,7 +142,6 @@ class CELPCClientSTDEvent(CELEvent):
       event_type (int): The PC Client event type.
       event_data (int): The PC Client event data.
     """
-    content_type = CELContentType.pcclient_std
     event_type: int
     event_data: bytes
 
@@ -161,7 +159,6 @@ class CELIMATemplateEvent(CELEvent):
       template_name (bytes): The template name.
       template_data (bytes): The template data.
     """
-    content_type = CELContentType.ima_template
     template_name: bytes
     template_data: bytes
 
@@ -288,7 +285,7 @@ class TLVParser:
         ib = self.get_bytes(size)
         return int.from_bytes(ib, byteorder="big")
 
-    def get_tl(self, expect: Iterable[int]) -> Tuple[int, int]:
+    def get_tl(self, expect: Union[int, Iterable[int]]) -> Tuple[int, int]:
         """Get the type and length.
 
         Args:
@@ -307,7 +304,9 @@ class TLVParser:
         vl = int.from_bytes(b[1:5], byteorder="big")
         return t, vl
 
-    def get_tlv_int(self, max_size, expect: Iterable[int]) -> int:
+    def get_tlv_int(
+        self, max_size, expect: Union[int, Iterable[int]]
+    ) -> Tuple[int, int]:
         """Get an TLV encoded number.
 
         Args:
@@ -350,6 +349,7 @@ class TLVParser:
         minor = -1
         while left:
             t, v = self.get_tlv_int(2, left)
+            t = CELVersionType(t)
             left.remove(t)
             if t == CELVersionType.major:
                 major = v
@@ -362,13 +362,14 @@ class TLVParser:
             handle=header.handle,
             digests=header.digests,
             content_type=header.content_type,
-            type=CELMgmtType.cel_version,
+            type=CELMgmtType(CELMgmtType.cel_version),
             major=major,
             minor=minor,
         )
 
     def parse_mgmt_event(self, header: CELEvent) -> CELMgmtEvent:
         """Parses CEL managment events."""
+        event: CELMgmtEvent
         t, vl = self.get_tl(expect=tuple(CELMgmtType))
         if t == CELMgmtType.cel_version:
             subdata = self.get_bytes(vl)
@@ -380,7 +381,7 @@ class TLVParser:
                 handle=header.handle,
                 digests=header.digests,
                 content_type=header.content_type,
-                type=t,
+                type=CELMgmtType(t),
             )
         elif t == CELMgmtType.cel_timestamp:
             timestamp = self.get_int(vl, 8)
@@ -389,7 +390,7 @@ class TLVParser:
                 handle=header.handle,
                 digests=header.digests,
                 content_type=header.content_type,
-                type=t,
+                type=CELMgmtType(t),
                 timestamp=timestamp,
             )
         elif t == CELMgmtType.state_trans:
@@ -399,7 +400,7 @@ class TLVParser:
                 handle=header.handle,
                 digests=header.digests,
                 content_type=header.content_type,
-                type=t,
+                type=CELMgmtType(t),
                 state_trans=StateTransType(state_trans),
             )
         else:
@@ -415,6 +416,7 @@ class TLVParser:
         event_data = b""
         while left:
             t, vl = self.get_tl(left)
+            t = CELPCClientSTDType(t)
             left.remove(t)
             if t == CELPCClientSTDType.event_type:
                 event_type = self.get_int(vl, 4)
@@ -440,6 +442,7 @@ class TLVParser:
         template_data = b""
         while left:
             t, vl = self.get_tl(left)
+            t = CELIMATemplateType(t)
             left.remove(t)
             if t == CELIMATemplateType.template_name:
                 template_name = self.get_bytes(vl)
@@ -466,6 +469,7 @@ class TLVParser:
         Returns:
           A subclass of CELEvent
         """
+        event: CELEvent
         _, recnum = self.get_tlv_int(8, CELBaseType.recnum)
         _, handle = self.get_tlv_int(
             4, (CELBaseType.pcr, CELBaseType.nv_index)

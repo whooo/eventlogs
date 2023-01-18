@@ -62,7 +62,7 @@ class IMATemplateDescriptor:
     )
 
     @classmethod
-    def expand(cls, descriptor: bytes) -> Tuple[IMATemplateField]:
+    def expand(cls, descriptor: bytes) -> Tuple[IMATemplateField, ...]:
         if descriptor == b"ima":
             return cls.ima
         elif descriptor == b"ima-ng":
@@ -80,10 +80,6 @@ class IMATemplateDescriptor:
         elif descriptor == b"evm-sig":
             return cls.evm_sig
         raise KeyError
-
-    @classmethod
-    def condense(cls, fields: Tuple[IMATemplateField]) -> bytes:
-        pass
 
 
 @dataclass
@@ -163,37 +159,37 @@ class IMAFieldIUID(IMAField):
 @dataclass
 class IMAFieldIGID(IMAField):
     field = IMATemplateField.igid
-    igid: bytes
+    igid: int
 
 
 @dataclass
 class IMAFieldIMode(IMAField):
     field = IMATemplateField.imode
-    mode: int
+    imode: int
 
 
 @dataclass
 class IMAFieldXattrNames(IMAField):
     field = IMATemplateField.xattrnames
-    names: Tuple[bytes]
+    names: Tuple[bytes, ...]
 
 
 @dataclass
 class IMAFieldXattrLengths(IMAField):
     field = IMATemplateField.xattrlengths
-    lengths: Tuple[int]
+    lengths: Tuple[int, ...]
 
 
 @dataclass
 class IMAFieldXattrValues(IMAField):
     field = IMATemplateField.xattrvalues
-    values: Tuple[bytes]
+    values: Tuple[bytes, ...]
 
 
 @dataclass
 class IMATemplateEvent:
     pcr: int
-    fields: Tuple[IMAField]
+    fields: Tuple[IMAField, ...]
     digests: Dict[DigestAlgorithm, bytes]
 
 
@@ -233,6 +229,7 @@ class IMAParser:
         return type(self)(data=data, byteorder=self._byteorder)
 
     def parse_field(self, field_type: IMATemplateField) -> IMAField:
+        field: IMAField
         fv = self.get_len_bytes()
         if field_type == IMATemplateField.d:
             field = IMAFieldD(field=field_type, digest=fv)
@@ -266,9 +263,9 @@ class IMAParser:
             field = IMAFieldIGID(field=field_type, igid=igid)
         elif field_type == IMATemplateField.imode:
             imode = int.from_bytes(fv, byteorder=self._byteorder)
-            field = IMAFieldIGID(field=field_type, imode=imode)
+            field = IMAFieldIMode(field=field_type, imode=imode)
         elif field_type == IMATemplateField.xattrnames:
-            xnames = fv.split("|")
+            xnames = fv.split(b"|")
             field = IMAFieldXattrNames(field=field_type, names=tuple(xnames))
         elif field_type == IMATemplateField.xattrlengths:
             subparser = self.get_subparser(fv)
@@ -285,7 +282,7 @@ class IMAParser:
         return field
 
     def parse_fields(
-        self, field_types: List[IMATemplateField]
+        self, field_types: Tuple[IMATemplateField, ...]
     ) -> List[IMAField]:
         fields = list()
         for ft in field_types:
@@ -306,6 +303,6 @@ class IMAParser:
         fields = subparser.parse_fields(field_types)
         return IMATemplateEvent(
             pcr=pcr,
-            fields=fields,
+            fields=tuple(fields),
             digests=digests
         )

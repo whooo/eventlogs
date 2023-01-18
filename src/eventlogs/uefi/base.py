@@ -7,7 +7,7 @@ This module implements UEFI structures and encodings.
 from ..common import DigestAlgorithm
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type, Union, Tuple
 from uuid import UUID
 
 
@@ -113,6 +113,7 @@ def register_event_handler(
     handler: Type[UEFIEvent],
     pcr: Optional[int] = None,
 ):
+    key: Union[UEFIEventType, Tuple[UEFIEventType, int]]
     key = event_type
     if pcr is not None:
         key = (event_type, pcr)
@@ -122,6 +123,7 @@ def register_event_handler(
 def lookup_event_handler(
     event_type: UEFIEventType, pcr: int
 ) -> Type[UEFIEvent]:
+    key: Union[UEFIEventType, Tuple[UEFIEventType, int]]
     key = (event_type, pcr)
     if key in _event_handlers:
         return _event_handlers[key]
@@ -133,7 +135,9 @@ _variable_handlers = dict()
 
 
 def register_variable_handler(
-    variable_name: UUID, unicode_name: Union[bytes, str], handler: UEFIVariable
+    variable_name: UUID,
+    unicode_name: Union[bytes, str],
+    handler: Type[UEFIVariable],
 ):
     if isinstance(unicode_name, str):
         unicode_name = unicode_name.encode("utf-16-le")
@@ -153,7 +157,7 @@ class UEFIParser:
         self._data = data
         self._offset = 0
         self._uintn = 2
-        self._digest_sizes = dict()
+        self._digest_sizes: Dict[DigestAlgorithm, int] = dict()
 
     @property
     def offset(self):
@@ -247,7 +251,7 @@ class UEFIParser:
         vendor_info_size = subparser.get_int(1)
         self._uintn = uintn_size
         self._digest_sizes = digest_sizes
-        digests = {DigestAlgorithm.sha1, digest}
+        digests = {DigestAlgorithm.sha1: digest}
         return SpecIDEvent(
             pcr=pcr,
             event_type=UEFIEventType(event_type),

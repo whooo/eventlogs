@@ -206,7 +206,7 @@ class UEFI_EF_EFI_BootServicesApplicationEvent(UEFIEvent):
     image_location_in_memory: int
     image_length_in_memory: int
     image_link_time_address: int
-    device_path: DevicePath
+    device_path: Tuple[DevicePath, ...]
 
     @classmethod
     def parse(
@@ -282,7 +282,7 @@ register_event_handler(
 
 @dataclass
 class UEFI_EV_EFI_HandoffTablesEvent(UEFIEvent):
-    table_entries: Tuple[Tuple[UUID, int]]
+    table_entries: Tuple[Tuple[UUID, int], ...]
 
     @classmethod
     def parse(
@@ -397,7 +397,7 @@ class UEFIPartitionEntry:
         return self.partition_name.decode("utf-16-le")
 
     @classmethod
-    def parse(cls, parser: UEFIParser) -> "UEFIPartitionHeader":
+    def parse(cls, parser: UEFIParser) -> "UEFIPartitionEntry":
         partition_type_guid = parser.get_guid()
         unique_partition_guid = parser.get_guid()
         starting_lba = parser.get_int(8)
@@ -417,7 +417,7 @@ class UEFIPartitionEntry:
 @dataclass
 class UEFI_EV_EFI_GPTEvent(UEFIEvent):
     partition_header: UEFIPartitionHeader
-    partition_entries: Tuple[UEFIPartitionEntry]
+    partition_entries: Tuple[UEFIPartitionEntry, ...]
 
     @classmethod
     def parse(

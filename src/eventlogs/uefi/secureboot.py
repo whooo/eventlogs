@@ -63,7 +63,7 @@ _signature_type_handlers = dict()
 
 
 def register_signature_type_handler(
-    signature_type: UUID, handler: SignatureData
+    signature_type: UUID, handler: Type[SignatureData]
 ):
     _signature_type_handlers[signature_type] = handler
 
@@ -97,7 +97,7 @@ register_signature_type_handler(
 class SignatureList:
     signature_type: UUID
     signature_header: bytes
-    signatures: Tuple[SignatureData]
+    signatures: Tuple[SignatureData, ...]
 
     @classmethod
     def parse(cls, parser: UEFIParser) -> "SignatureList":
@@ -124,7 +124,7 @@ class SignatureList:
 
 @dataclass
 class SignaturesVariable(UEFIVariable):
-    signature_lists: Tuple[SignatureList]
+    signature_lists: Tuple[SignatureList, ...]
 
     @classmethod
     def parse(cls, parser: UEFIParser) -> "SignaturesVariable":
