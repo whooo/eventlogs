@@ -4,7 +4,13 @@
 This module implements the Canonical Event Log structures and encodings
 """
 
-from .common import _EnumBase, DigestAlgorithm
+from .common import (
+    _EnumBase,
+    DigestAlgorithm,
+    ShortBufferError,
+    NotConsumedError,
+    UnexpectedTypeError,
+)
 from dataclasses import dataclass
 from typing import Dict, Iterable, Tuple, Union
 
@@ -261,10 +267,10 @@ class TLVParser:
           size (int): The number of bytes to get.
 
         Raises:
-          EOFError: if size is larger then the number of bytes left.
+          ShortBufferError: if size is larger then the number of bytes left.
         """
         if size > self.left:
-            raise EOFError
+            raise ShortBufferError(self.offset, size, self.left)
         b = self._data[self.offset:self.offset+size]
         self._offset += len(b)
         return b
@@ -277,11 +283,13 @@ class TLVParser:
           max_size: The max number of bytes that represent the number.
 
         Raises:
-          EOFError: If size is larger then the number of bytes left.
+          ShortBufferError: If size is larger then the number of bytes left.
           ValueError: If size is larger then max_size.
         """
         if size > max_size:
-            raise ValueError("valute too large")
+            raise ValueError(
+                f"requested int size {size} larger then {max_size}"
+            )
         ib = self.get_bytes(size)
         return int.from_bytes(ib, byteorder="big")
 
@@ -292,15 +300,15 @@ class TLVParser:
           expect: (Iterable[int]): The list of CEL types to expect.
 
         Raises:
-          EOFError: If there isn't enough bytes left to consume.
-          ValueError: If the type is not in expect.
+          ShortBufferError: If there isn't enough bytes left to consume.
+          UnexpectedTypeError: If the type is not in expect.
         """
         b = self.get_bytes(5)
         t = int(b[0])
         if isinstance(expect, int):
             expect = (expect,)
         if expect and t not in expect:
-            raise ValueError(f"expected one of {expect}, got {t}")
+            raise UnexpectedTypeError(t, expect)
         vl = int.from_bytes(b[1:5], byteorder="big")
         return t, vl
 
@@ -314,32 +322,33 @@ class TLVParser:
           expect: (Iterable[int]): The list of CEL types to expect.
 
         Raises:
-          EOFError: If there isn't enough bytes left to consume.
-          ValueError: If the type is not in expect.
+          ShortBufferError: If there isn't enough bytes left to consume.
+          UnexpectedTypeError: If the type is not in expect.
           ValueError: If the number bytes is larger then max_size.
         """
         t, vl = self.get_tl(expect)
         v = self.get_int(vl, max_size)
         return t, v
 
+    def get_subparser(self, size: int) -> "TLVParser":
+        subdata = self.get_bytes(size)
+        return type(self)(subdata)
+
     def get_digests(self) -> Dict[DigestAlgorithm, bytes]:
         """Get a list of digests.
 
         Raises:
-          EOFError: If there isn't enough bytes left to consume.
-          ValueError: If any type or digest algorithm is unsupported.
+          ShortBufferError: If there isn't enough bytes left to consume.
+          UnexpectedTypeError: If any type or digest algorithm are unsupported.
         """
         _, vl = self.get_tl(expect=CELBaseType.digests)
-        left = vl
+        subparser = self.get_subparser(vl)
         digs = {}
-        while left > 0:
-            a, vl = self.get_tl(expect=tuple(DigestAlgorithm))
-            dig = self.get_bytes(vl)
+        while subparser.left:
+            a, vl = subparser.get_tl(expect=tuple(DigestAlgorithm))
+            dig = subparser.get_bytes(vl)
             da = DigestAlgorithm(a)
             digs[da] = dig
-            left -= 5 + vl
-        if left != 0:
-            raise ValueError
         return digs
 
     def parse_mgmt_version_event(self, header: CELEvent) -> CELVersionEvent:
@@ -355,8 +364,8 @@ class TLVParser:
                 major = v
             elif t == CELVersionType.minor:
                 minor = v
-        if self.left > 0:
-            raise ValueError
+        if self.left:
+            raise NotConsumedError(self.left)
         return CELVersionEvent(
             recnum=header.recnum,
             handle=header.handle,
@@ -372,8 +381,7 @@ class TLVParser:
         event: CELMgmtEvent
         t, vl = self.get_tl(expect=tuple(CELMgmtType))
         if t == CELMgmtType.cel_version:
-            subdata = self.get_bytes(vl)
-            subparser = TLVParser(subdata)
+            subparser = self.get_subparser(vl)
             event = subparser.parse_mgmt_version_event(header)
         elif t == CELMgmtType.firmware_end:
             event = CELFirmwareEndEvent(
@@ -403,8 +411,6 @@ class TLVParser:
                 type=CELMgmtType(t),
                 state_trans=StateTransType(state_trans),
             )
-        else:
-            raise ValueError
         return event
 
     def parse_pcclient_std_event(
@@ -422,8 +428,8 @@ class TLVParser:
                 event_type = self.get_int(vl, 4)
             elif t == CELPCClientSTDType.event_data:
                 event_data = self.get_bytes(vl)
-        if self.left > 0:
-            raise ValueError
+        if self.left:
+            raise NotConsumedError(self.left)
         return CELPCClientSTDEvent(
             recnum=header.recnum,
             handle=header.handle,
@@ -448,8 +454,8 @@ class TLVParser:
                 template_name = self.get_bytes(vl)
             elif t == CELIMATemplateType.template_data:
                 template_data = self.get_bytes(vl)
-        if self.left > 0:
-            raise ValueError
+        if self.left:
+            raise NotConsumedError(self.left)
         return CELIMATemplateEvent(
             recnum=header.recnum,
             handle=header.handle,
@@ -463,8 +469,8 @@ class TLVParser:
         """Parses an event.
 
         Raises:
-          EOFError: If the buffer too small.
-          ValueError: If there is any unexpected type.
+          ShortBufferError: If the buffer too small.
+          UnexpectedTypeError: If there is any unexpected type.
 
         Returns:
           A subclass of CELEvent
@@ -483,14 +489,11 @@ class TLVParser:
             digests=digests,
             content_type=content_type,
         )
-        subdata = self.get_bytes(cl)
-        subparser = TLVParser(subdata)
+        subparser = self.get_subparser(cl)
         if content_type == CELContentType.cel:
             event = subparser.parse_mgmt_event(header)
         elif content_type == CELContentType.pcclient_std:
             event = subparser.parse_pcclient_std_event(header)
         elif content_type == CELContentType.ima_template:
             event = subparser.parse_ima_template_event(header)
-        else:
-            raise ValueError
         return event
