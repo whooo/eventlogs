@@ -4,7 +4,12 @@
 This module implements IMA structures and encodings.
 """
 
-from .common import DigestAlgorithm
+from .common import (
+    DigestAlgorithm,
+    ShortBufferError,
+    NotConsumedError,
+    UnexpectedTypeError,
+)
 from dataclasses import dataclass
 from enum import Enum
 from typing import Tuple, Dict, List, Literal
@@ -79,7 +84,19 @@ class IMATemplateDescriptor:
             return cls.ima_modsig
         elif descriptor == b"evm-sig":
             return cls.evm_sig
-        raise KeyError
+        raise UnexpectedTypeError(
+            got=descriptor.decode("ascii"),
+            expected=(
+                "ima",
+                "ima-ng",
+                "ima-ngv2",
+                "ima-sig",
+                "ima-sigv2",
+                "ima-buf",
+                "ima-modsig",
+                "evm-sig",
+            )
+        )
 
 
 @dataclass
@@ -211,7 +228,7 @@ class IMAParser:
 
     def get_bytes(self, size: int) -> bytes:
         if size > self.left:
-            raise EOFError
+            raise ShortBufferError(self.offset, size, self.left)
         b = self._data[self.offset:self.offset + size]
         self._offset += size
         return b
@@ -277,8 +294,6 @@ class IMAParser:
         elif field_type == IMATemplateField.xattrvalues:
             # FIXME, figure out how to parse this
             raise NotImplementedError
-        else:
-            raise ValueError
         return field
 
     def parse_fields(
@@ -301,8 +316,10 @@ class IMAParser:
         subdata = self.get_len_bytes()
         subparser = self.get_subparser(subdata)
         fields = subparser.parse_fields(field_types)
+        if subparser.left:
+            raise NotConsumedError(subparser.left)
         return IMATemplateEvent(
             pcr=pcr,
             fields=tuple(fields),
-            digests=digests
+            digests=digests,
         )

@@ -57,12 +57,14 @@ class NotConsumedError(Exception):
 
 
 class UnexpectedTypeError(Exception):
-    def __init__(self, got: int, expected: Iterable[Union[int, str]]):
+    def __init__(
+        self, got: Union[int, str], expected: Iterable[Union[int, str]]
+    ):
         self._got = got
         self._expected = expected
 
     @property
-    def got(self) -> int:
+    def got(self) -> Union[int, str]:
         return self._got
 
     @property
