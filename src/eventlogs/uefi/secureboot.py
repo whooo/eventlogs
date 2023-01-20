@@ -8,10 +8,10 @@ from .base import (
     UEFIParser,
     UEFIVariable,
     UEFIEvent,
-    UEFIEventType,
     register_variable_handler,
     register_event_handler
 )
+from ..common import UEFIEventType
 from dataclasses import dataclass
 from typing import Tuple, Type
 from uuid import UUID

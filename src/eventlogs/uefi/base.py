@@ -4,48 +4,10 @@
 This module implements UEFI structures and encodings.
 """
 
-from ..common import DigestAlgorithm
+from ..common import DigestAlgorithm, UEFIEventType
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import Dict, Optional, Type, Union, Tuple
 from uuid import UUID
-
-
-class UEFIEventType(IntEnum):
-    ev_post_code = 0x00000001
-    ev_no_action = 0x00000003
-    ev_separator = 0x00000004
-    ev_action = 0x00000005
-    ev_event_tag = 0x00000006
-    ev_s_crtm_contents = 0x00000007
-    ev_s_crtm_version = 0x00000008
-    ev_cpu_microcode = 0x00000009
-    ev_platform_config_flags = 0x0000000A
-    ev_table_of_devices = 0x0000000B
-    ev_compact_hash = 0x0000000C
-    ev_ipl = 0x0000000D
-    ev_ipl_partition_data = 0x0000000E
-    ev_nonhost_code = 0x0000000F
-    ev_nonhost_config = 0x00000010
-    ev_nonhost_info = 0x00000011
-    ev_omit_boot_device_events = 0x00000012
-    ev_efi_event_base = 0x80000000
-    ev_efi_variable_driver_config = 0x80000001
-    ev_efi_variable_boot = 0x80000002
-    ev_efi_boot_services_application = 0x80000003
-    ev_efi_boot_services_driver = 0x80000004
-    ev_efi_runtime_services_driver = 0x80000005
-    ev_efi_gpt_event = 0x80000006
-    ev_efi_action = 0x80000007
-    ev_efi_platform_firmware_blob = 0x80000008
-    ev_efi_handoff_tables = 0x80000009
-    ev_efi_platform_firmware_blob2 = 0x8000000A
-    ev_efi_handoff_tables2 = 0x8000000B
-    ev_efi_variable_boot2 = 0x8000000C
-    ev_efi_hcrtm_event = 0x80000010
-    ev_efi_variable_authority = 0x800000E0
-    ev_efi_spdm_firmware_blob = 0x800000E1
-    ev_efi_spdm_firmware_config = 0x800000E2
 
 
 @dataclass

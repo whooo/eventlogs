@@ -5,13 +5,13 @@ This module implements UEFI structures
 """
 
 from .base import (
-    UEFIEventType,
     UEFIEvent,
     UEFIParser,
     register_event_handler,
     lookup_variable_handler,
     UEFIVariable,
 )
+from ..common import UEFIEventType
 from .device_path import DevicePath, parse_device_path
 from . import secureboot
 from dataclasses import dataclass

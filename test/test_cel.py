@@ -8,6 +8,7 @@ from eventlogs.common import (
     ShortBufferError,
     NotConsumedError,
     UnexpectedTypeError,
+    UEFIEventType,
 )
 from eventlogs.cel import (
     TLVParser,
@@ -95,7 +96,7 @@ class CELTest(unittest.TestCase):
         self.assertEqual(event.handle, 1)
         self.assertEqual(event.digests, {DigestAlgorithm.sha1: b"\x00" * 20})
         self.assertEqual(event.content_type, CELContentType.pcclient_std)
-        self.assertEqual(event.event_type, 0x12345678)
+        self.assertEqual(event.event_type, UEFIEventType.ev_efi_spdm_firmware_config)
         self.assertEqual(event.event_data, b"falafel")
 
     def test_cel_TLVParser_ima_template(self):

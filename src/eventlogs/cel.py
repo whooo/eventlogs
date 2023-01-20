@@ -7,6 +7,7 @@ This module implements the Canonical Event Log structures and encodings
 from .common import (
     _EnumBase,
     DigestAlgorithm,
+    UEFIEventType,
     ShortBufferError,
     NotConsumedError,
     UnexpectedTypeError,
@@ -148,7 +149,7 @@ class CELPCClientSTDEvent(CELEvent):
       event_type (int): The PC Client event type.
       event_data (int): The PC Client event data.
     """
-    event_type: int
+    event_type: UEFIEventType
     event_data: bytes
 
 
@@ -435,7 +436,7 @@ class TLVParser:
             handle=header.handle,
             digests=header.digests,
             content_type=header.content_type,
-            event_type=event_type,
+            event_type=UEFIEventType(event_type),
             event_data=event_data,
         )
 
